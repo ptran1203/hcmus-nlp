@@ -21,7 +21,32 @@ pháp dựa trên embedding/LLM.
 
 ## 3. Dataset:
 
-- Chiến Quốc Sách: https://drive.google.com/file/d/1mI0pRTRAKs9uOY16vPo5PJBtNeB1vO5N/view
-- Liệt Nữ Truyện: https://drive.google.com/file/d/1sUM_MNpThyFammF7BC45XdCINemgu8eK/view
-- Sử ký tư mã thiên: https://drive.google.com/file/d/1S5ijemxpcQulqKFPIl0VC2_reZQXN3kM/view
-- Tam Quốc Chí: https://drive.google.com/file/d/1-RuBLkFIsIdk9_rbH9LQtnNn2n0hdEmk/view
+| Book | Han | Vietnamese |
+|------|-----|------------|
+| Chiến Quốc Sách | [Han](https://drive.google.com/file/d/1mI0pRTRAKs9uOY16vPo5PJBtNeB1vO5N/view) | [Viet](https://drive.google.com/file/d/1lPYxr1j7dy5rziCDyd94uWNPWbFXE2YM/view?usp=drive_link) |
+| Liệt Nữ Truyện | [Han](https://drive.google.com/file/d/1sUM_MNpThyFammF7BC45XdCINemgu8eK/view) | [Viet](https://drive.google.com/file/d/10bXyKWCuGFqZQjybfuUbI1R6sEM6rTg0/view?usp=drive_link) |
+| Sử Ký Tư Mã Thiên | [Han](https://drive.google.com/file/d/1S5ijemxpcQulqKFPIl0VC2_reZQXN3kM/view) | [Viet](https://drive.google.com/file/d/1AF87BbpWObUDdS4vIyDXVJnvAZmS0OYg/view?usp=drive_link) |
+| Tam Quốc Chí | [Han](https://drive.google.com/file/d/1-RuBLkFIsIdk9_rbH9LQtnNn2n0hdEmk/view) | [Viet](https://drive.google.com/file/d/1yAHRP3x-sXDtleikiThq_ntAIKK5IllH/view?usp=drive_link) |
+
+
+## Works
+
+### Person 1 — Data Collection & Cleaning
+
+Collect Han + Viet parallel text sources (historical domain)
+Clean raw text: remove noise, normalize encoding (UTF-8), fix formatting
+Deliverable: clean raw text pairs
+
+### Person 2 — Sentence Segmentation
+
+Split Han text into sentences (HanLP / CKIP / LLM)
+Split Viet text into sentences (Underthesea / VnCoreNLP / LLM)
+NER tagging to assist alignment accuracy
+Deliverable: segmented sentence lists for both languages
+
+### Person 3 — Alignment & Evaluation
+
+Align Han-Viet sentence pairs (LaBSE / Vecalign / BERTAlign)
+Filter low-confidence pairs, manually review edge cases
+Export final corpus (TSV/JSON) + quality metrics
+Deliverable: final parallel dataset + evaluation report
