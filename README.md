@@ -28,6 +28,19 @@ pháp dựa trên embedding/LLM.
 | Sử Ký Tư Mã Thiên | [Han](https://drive.google.com/file/d/1S5ijemxpcQulqKFPIl0VC2_reZQXN3kM/view) | [Viet](https://drive.google.com/file/d/1AF87BbpWObUDdS4vIyDXVJnvAZmS0OYg/view?usp=drive_link) |
 | Tam Quốc Chí | [Han](https://drive.google.com/file/d/1-RuBLkFIsIdk9_rbH9LQtnNn2n0hdEmk/view) | [Viet](https://drive.google.com/file/d/1yAHRP3x-sXDtleikiThq_ntAIKK5IllH/view?usp=drive_link) |
 
+## How to run this project
+
+```
+pip install -r requirements.txt
+
+# 1. Download raw Han (.txt) / Viet (.pdf) sources from Drive into dataset/raw/
+python pipelines/00_download.py
+
+# 2. Clean raw sources into paragraph-level JSONL in dataset/cleaned/
+python pipelines/01_clean.py
+```
+
+Add `--only slug1,slug2` to either script to run a single book (slugs: `chien_quoc_sach`, `liet_nu_truyen`, `su_ky_tu_ma_thien`, `tam_quoc_chi`).
 
 ## Works
 
