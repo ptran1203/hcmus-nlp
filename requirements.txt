@@ -1,2 +1,5 @@
 gdown
 PyMuPDF
+underthesea
+sentence-transformers
+tqdm

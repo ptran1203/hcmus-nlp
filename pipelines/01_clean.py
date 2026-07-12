@@ -49,6 +49,24 @@ def write_jsonl(records: list[dict], out_path: Path) -> None:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
 
+def dedup_exact(items: list, key=lambda x: x) -> tuple[list, int]:
+    """Drop items whose key exactly matches an earlier item's key, keeping the
+    first occurrence. Source files can contain accidental duplicate blocks
+    (e.g. a botched OCR/extraction re-run); this removes them before they
+    inflate downstream sentence counts."""
+    seen = set()
+    out = []
+    dropped = 0
+    for item in items:
+        k = key(item)
+        if k in seen:
+            dropped += 1
+            continue
+        seen.add(k)
+        out.append(item)
+    return out, dropped
+
+
 def clean_han(book: dict, raw_folder: Path) -> None:
     matches = list(raw_folder.glob("han.*"))
     if not matches:
@@ -56,9 +74,12 @@ def clean_han(book: dict, raw_folder: Path) -> None:
         return
     src = matches[0]
     text = clean_text(read_text_file(src))
+    paragraphs, n_dropped = dedup_exact(split_paragraphs(text))
+    if n_dropped:
+        log.warning("  [dedup] dropped %d duplicate han paragraphs", n_dropped)
     records = [
         {"book": book["slug"], "lang": "han", "page": None, "para_id": i, "text": p}
-        for i, p in enumerate(split_paragraphs(text))
+        for i, p in enumerate(paragraphs)
     ]
     write_jsonl(records, CLEANED_DIR / book["slug"] / "han.jsonl")
     log.info("  [ok] han: %d paragraphs <- %s", len(records), src.name)
@@ -72,19 +93,26 @@ def clean_viet(book: dict, raw_folder: Path) -> None:
     src = matches[0]
 
     if src.suffix.lower() == ".pdf":
-        records = []
-        para_id = 0
-        for page_no, raw_page in extract_pdf_pages(src):
-            for p in split_paragraphs(clean_text(raw_page)):
-                records.append(
-                    {"book": book["slug"], "lang": "viet", "page": page_no, "para_id": para_id, "text": p}
-                )
-                para_id += 1
+        page_paragraphs = [
+            (page_no, p)
+            for page_no, raw_page in extract_pdf_pages(src)
+            for p in split_paragraphs(clean_text(raw_page))
+        ]
+        page_paragraphs, n_dropped = dedup_exact(page_paragraphs, key=lambda x: x[1])
+        if n_dropped:
+            log.warning("  [dedup] dropped %d duplicate viet paragraphs", n_dropped)
+        records = [
+            {"book": book["slug"], "lang": "viet", "page": page_no, "para_id": i, "text": p}
+            for i, (page_no, p) in enumerate(page_paragraphs)
+        ]
     else:
         text = clean_text(read_text_file(src))
+        paragraphs, n_dropped = dedup_exact(split_paragraphs(text))
+        if n_dropped:
+            log.warning("  [dedup] dropped %d duplicate viet paragraphs", n_dropped)
         records = [
             {"book": book["slug"], "lang": "viet", "page": None, "para_id": i, "text": p}
-            for i, p in enumerate(split_paragraphs(text))
+            for i, p in enumerate(paragraphs)
         ]
 
     write_jsonl(records, CLEANED_DIR / book["slug"] / "viet.jsonl")
