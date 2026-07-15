@@ -3,3 +3,5 @@ PyMuPDF
 underthesea
 sentence-transformers
 tqdm
+pandas
+openpyxl

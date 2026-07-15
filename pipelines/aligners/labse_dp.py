@@ -17,11 +17,12 @@ need to jump far from the proportional diagonal (e.g. a large block present
 on only one side) can fall outside the band and get missed.
 
 Supports ensembling multiple embedding models: pass a comma-separated string
-(or list) of model names and each span's similarity becomes the average
-cosine similarity across all of them -- a cheap way to reduce the risk of
-any single model's blind spots dominating the alignment (see MODEL_SIZES for
-the models this has been tried with). Defaults to a single lightweight model
-instead of LaBSE for a much lighter RAM/CPU footprint at some accuracy cost.
+(or list) of model names and each span's embedding becomes the concatenation
+of every model's (normalized) embedding, re-normalized to unit length -- a
+cheap way to reduce the risk of any single model's blind spots dominating
+the alignment (see MODEL_SIZES for the models this has been tried with).
+Defaults to a single lightweight model instead of LaBSE for a much lighter
+RAM/CPU footprint at some accuracy cost.
 """
 import numpy as np
 from tqdm import tqdm
@@ -72,8 +73,12 @@ class LabseDPAligner(SentenceAligner):
             self._models = [SentenceTransformer(name) for name in self._model_names]
         return self._models
 
-    def _span_embeddings(self, sents: list[str]) -> list[dict]:
-        """One {(start,end): embedding} dict per model in the ensemble."""
+    def _span_embeddings(self, sents: list[str], lang_label: str) -> dict:
+        """Concatenate each model's (unit-normalized) embedding for a span into
+        one combined vector, then re-normalize to unit length. Cosine similarity
+        of these combined vectors works out to the average of the per-model
+        cosine similarities (since each sub-vector contributes equally), but
+        expressed as a single embedding per span rather than a list of scores."""
         spans = [
             (start, start + length)
             for length in range(1, MAX_MERGE + 1)
@@ -81,15 +86,22 @@ class LabseDPAligner(SentenceAligner):
         ]
         raw_texts = [" ".join(sents[s:e])[:MAX_SPAN_CHARS] for s, e in spans]
 
-        per_model = []
-        for name, model in zip(self._model_names, self.models):
+        per_model_embs = []
+        for model_idx, (name, model) in enumerate(zip(self._model_names, self.models), start=1):
             prefix = MODEL_PREFIXES.get(name, "")
             texts = [prefix + t for t in raw_texts] if prefix else raw_texts
+            tqdm.write(
+                f"[{lang_label}] encoding {len(texts)} spans with model "
+                f"{model_idx}/{len(self._model_names)}: {name}"
+            )
             embs = model.encode(
                 texts, normalize_embeddings=True, show_progress_bar=True, batch_size=BATCH_SIZE
             )
-            per_model.append(dict(zip(spans, embs)))
-        return per_model
+            per_model_embs.append(np.asarray(embs))
+
+        combined = np.concatenate(per_model_embs, axis=1)
+        combined /= np.linalg.norm(combined, axis=1, keepdims=True)
+        return dict(zip(spans, combined))
 
     @staticmethod
     def _band(i: int, n: int, m: int) -> tuple[int, int]:
@@ -101,12 +113,11 @@ class LabseDPAligner(SentenceAligner):
         if n == 0 or m == 0:
             return []
 
-        han_embs = self._span_embeddings(han_sents)
-        viet_embs = self._span_embeddings(viet_sents)
+        han_embs = self._span_embeddings(han_sents, "han")
+        viet_embs = self._span_embeddings(viet_sents, "viet")
 
         def sim(h_span, v_span) -> float:
-            scores = [float(np.dot(h[h_span], v[v_span])) for h, v in zip(han_embs, viet_embs)]
-            return sum(scores) / len(scores)
+            return float(np.dot(han_embs[h_span], viet_embs[v_span]))
 
         bands = [self._band(i, n, m) for i in range(n + 1)]
 

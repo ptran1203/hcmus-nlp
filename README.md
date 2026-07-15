@@ -44,11 +44,35 @@ python pipelines/02_segment.py
 
 # 4. Align Han-Viet sentences -> dataset/aligned/<slug>.tsv + report.json
 python pipelines/03_align.py
+
+# 5. Export final deliverables -> dataset/deliverables/
+#    <slug>_raw.txt, <slug>_parallel.tsv, <slug>_parallel.xlsx
+python pipelines/04_export.py
 ```
 
 Add `--only slug1,slug2` to either script to run a single book (slugs: `chien_quoc_sach`, `liet_nu_truyen`, `su_ky_tu_ma_thien`, `tam_quoc_chi`).
 
 `03_align.py` also takes `--model name` to pick the embedding model (default: `paraphrase-multilingual-MiniLM-L12-v2`), or a comma-separated list for an ensemble (similarity = average across models), e.g. `--model sentence-transformers/LaBSE,intfloat/multilingual-e5-large`. See `pipelines/aligners/labse_dp.py` (`MODEL_SIZES`) for the models tried and their approximate download sizes.
+
+## Sample run
+
+
+```bash
+# 1. Download raw Han (.txt) / Viet (.pdf) sources from Drive
+python pipelines/00_download.py --only liet_nu_truyen,su_ky_tu_ma_thien,tam_quoc_chi
+
+# 2. Clean raw sources into paragraph-level JSONL
+python pipelines/01_clean.py --only liet_nu_truyen,su_ky_tu_ma_thien,tam_quoc_chi
+
+# 3. Split cleaned paragraphs into sentences
+python pipelines/02_segment.py --only liet_nu_truyen,su_ky_tu_ma_thien,tam_quoc_chi
+
+# 4. Align Han-Viet sentences
+python pipelines/03_align.py --only liet_nu_truyen,su_ky_tu_ma_thien,tam_quoc_chi
+
+# 5. Export final deliverables
+python pipelines/04_export.py --only liet_nu_truyen,su_ky_tu_ma_thien,tam_quoc_chi
+```
 
 ## Works
 

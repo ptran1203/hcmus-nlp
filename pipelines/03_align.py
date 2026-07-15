@@ -33,6 +33,9 @@ log = logging.getLogger(__name__)
 SEGMENTED_DIR = CLEANED_DIR.parent / "segmented"
 ALIGNED_DIR = CLEANED_DIR.parent / "aligned"
 
+MIN_TEXT_CHARS = 5  # drop pairs where either side has fewer than this many characters
+RATIO_OUTLIER_STDEV = 2.0  # drop pairs whose viet/han length ratio is this many stdevs from the mean
+
 
 def read_jsonl(path: Path) -> list[dict]:
     with path.open(encoding="utf-8") as f:
@@ -93,7 +96,28 @@ def align_book(book: dict, min_score: float, aligner) -> tuple[dict, list[Aligne
     viet_sents = [r["text"] for r in read_jsonl(viet_path)]
 
     pairs = aligner.align(han_sents, viet_sents)
-    kept = [p for p in pairs if p.han_ids and p.viet_ids and p.score >= min_score]
+
+    scored = [p for p in pairs if p.han_ids and p.viet_ids and p.score >= min_score]
+    long_enough = [
+        p for p in scored
+        if len(p.han_text) >= MIN_TEXT_CHARS and len(p.viet_text) >= MIN_TEXT_CHARS
+    ]
+
+    pre_ratio_stats = length_ratio_stats(long_enough)
+    mean, stdev = pre_ratio_stats.get("mean"), pre_ratio_stats.get("stdev")
+    if stdev:
+        kept = [
+            p for p in long_enough
+            if abs(len(p.viet_text) / len(p.han_text) - mean) <= RATIO_OUTLIER_STDEV * stdev
+        ]
+    else:
+        kept = long_enough
+
+    drop_counts = {
+        "dropped_low_score": len(pairs) - len(scored),
+        "dropped_too_short": len(scored) - len(long_enough),
+        "dropped_length_ratio_outlier": len(long_enough) - len(kept),
+    }
 
     out_path = ALIGNED_DIR / f"{book['slug']}.tsv"
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -119,6 +143,7 @@ def align_book(book: dict, min_score: float, aligner) -> tuple[dict, list[Aligne
         "viet_sentences": len(viet_sents),
         "pairs_kept": len(kept),
         "pairs_dropped": len(pairs) - len(kept),
+        **drop_counts,
         "score_stats": score_summary,
         "merge_pattern_counts": merge_pattern_counts(pairs),
         "length_ratio_stats": length_ratio_stats(kept),
@@ -164,6 +189,10 @@ def main() -> None:
             all_kept.extend(kept)
 
     overall = {
+        "pairs_kept": sum(s["pairs_kept"] for s in summaries),
+        "dropped_low_score": sum(s["dropped_low_score"] for s in summaries),
+        "dropped_too_short": sum(s["dropped_too_short"] for s in summaries),
+        "dropped_length_ratio_outlier": sum(s["dropped_length_ratio_outlier"] for s in summaries),
         "score_stats": value_stats([p.score for p in all_kept]),
         "merge_pattern_counts": sum_dicts([s["merge_pattern_counts"] for s in summaries]),
         "length_ratio_stats": length_ratio_stats(all_kept),
