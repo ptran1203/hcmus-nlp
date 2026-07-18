@@ -5,6 +5,10 @@ PDFs and need text extraction first. Output goes to dataset/cleaned/<slug>/
 {han,viet}.jsonl, one paragraph per line, keeping page/paragraph provenance
 so later segmentation & alignment steps can trace text back to its source.
 
+PDF pages with no embedded text layer (scanned-image books) fall back to
+OCR (PaddleOCR, Vietnamese model) automatically -- no flag needed, since the
+OCR model only loads lazily the first time a blank page is actually hit.
+
 Usage:
     python pipelines/01_clean.py [--only slug1,slug2]
 """
@@ -14,6 +18,7 @@ import logging
 from pathlib import Path
 
 from config import BOOKS, CLEANED_DIR, RAW_DIR
+from pdf_extract import extract_pdf_pages
 from text_clean import clean_text, split_paragraphs
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -30,16 +35,6 @@ def read_text_file(path: Path) -> str:
         except UnicodeDecodeError:
             continue
     return raw.decode("utf-8", errors="ignore")
-
-
-def extract_pdf_pages(path: Path) -> list[tuple[int, str]]:
-    import fitz  # PyMuPDF
-
-    pages = []
-    with fitz.open(path) as doc:
-        for i, page in enumerate(doc, start=1):
-            pages.append((i, page.get_text("text")))
-    return pages
 
 
 def write_jsonl(records: list[dict], out_path: Path) -> None:

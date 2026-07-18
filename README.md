@@ -37,6 +37,8 @@ pip install -r requirements.txt
 python pipelines/00_download.py
 
 # 2. Clean raw sources into paragraph-level JSONL in dataset/cleaned/
+#    (PDF pages with no text layer -- e.g. chien_quoc_sach's scanned viet.pdf --
+#     fall back to PaddleOCR automatically)
 python pipelines/01_clean.py
 
 # 3. Split cleaned paragraphs into sentences -> dataset/segmented/
@@ -60,6 +62,8 @@ Add `--only slug1,slug2` to either script to run a single book (slugs: `chien_qu
 ```bash
 # 1. Download raw Han (.txt) / Viet (.pdf) sources from Drive
 python pipelines/00_download.py --only liet_nu_truyen,su_ky_tu_ma_thien,tam_quoc_chi
+
+python pipelines/jsonl_to_raw.py chien_quoc_sach
 
 # 2. Clean raw sources into paragraph-level JSONL
 python pipelines/01_clean.py --only liet_nu_truyen,su_ky_tu_ma_thien,tam_quoc_chi

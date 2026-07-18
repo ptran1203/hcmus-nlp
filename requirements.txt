@@ -5,3 +5,6 @@ sentence-transformers
 tqdm
 pandas
 openpyxl
+easyocr
+vietocr
+Pillow

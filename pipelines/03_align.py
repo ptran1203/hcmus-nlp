@@ -166,7 +166,7 @@ def sum_dicts(dicts: list[dict]) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--only", help="comma-separated book slugs to align (default: all)")
-    parser.add_argument("--min-score", type=float, default=0.5, help="drop pairs scoring below this")
+    parser.add_argument("--min-score", type=float, default=0.6, help="drop pairs scoring below this")
     parser.add_argument(
         "--model",
         help="sentence-transformers model name(s) for the aligner, comma-separated for an "

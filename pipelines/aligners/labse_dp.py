@@ -58,6 +58,14 @@ MODEL_PREFIXES = {
 
 class LabseDPAligner(SentenceAligner):
     def __init__(self, model_names=None):
+        if isinstance(model_names, str) and model_names == "ensemble":
+            model_names = [
+                "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+                # "intfloat/multilingual-e5-small",
+                "intfloat/multilingual-e5-large",
+                "BAAI/bge-m3"
+            ]
+
         if not model_names:
             model_names = [DEFAULT_MODEL]
         elif isinstance(model_names, str):
